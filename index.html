@@ -1,1 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>CodeAI — Advanced File, Code & Website Scanner</title>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      background: #0b1220;
+      color: #e6eef8;
+      -webkit-font-smoothing:antialiased;
+    }
 
+    header {
+      background:#0f1724;padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;
+      border-bottom:1px solid #1f2a3a; position:sticky; top:0; z-index:50;
+    }
+    header h1 { margin:0; color:#60a5fa; font-size:1.25rem; letter-spacing:0.2px; }
+    nav a { color:#cfe8ff; margin-left:1rem; text-decoration:none; font-size:0.95rem; }
+    nav a:hover { color:#60a5fa; }
+
+    .hero { text-align:center; padding:3.5rem 1.5rem; background: linear-gradient(180deg,#071024,#071628 60%); }
+    .hero h2 { margin:0 0 0.5rem 0; font-size:2rem; color:#e6f3ff; }
+    .hero p { margin:0 auto 1rem; max-width:720px; color:#98a9c2; }
+
+    .container { max-width:1000px; margin:2rem auto; padding:0 1rem; }
+
+    .card {
+      background:#0e1622;border:1px solid #1f2a3a;border-radius:10px;padding:1.25rem;margin-bottom:1rem;
+      box-shadow: 0 6px 18px rgba(2,6,23,0.45);
+    }
+
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    @media (max-width:880px){ .row { grid-template-columns:1fr; } }
+
+    label { display:block;font-weight:600;color:#cfe8ff;margin-bottom:0.5rem; }
+    input[type=file] { background:#071122;color:#e6eef8;padding:0.5rem;border-radius:8px;border:1px solid #223247; }
+    .status { color:#9fb2d1;margin-top:0.5rem;font-size:0.95rem; }
+
+    .btn {
+      background:#60a5fa;color:#071024;border:none;padding:.6rem .9rem;border-radius:8px;font-weight:700;
+      cursor:pointer;font-size:0.95rem;
+    }
+    .btn:hover{ background:#3b82f6; }
+    .btn.secondary { background:#283647;color:#dbeafe; border:1px solid #2c3e50; }
+
+    textarea { width:100%; min-height:220px; resize:vertical;
+      background:#071022;border:1px solid #223247;color:#e6eef8;padding:12px;border-radius:8px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace; font-size:13px;
+    }
+
+    .result { margin-top:1rem;padding:1rem;border-radius:8px;border:1px solid #223247;background:#071022; color:#e6eef8; }
+    .result.safe{ border-color:#064e3b; box-shadow: 0 0 0 3px rgba(16,185,129,0.05); }
+    .result.warning{ border-color:#92400e; box-shadow: 0 0 0 3px rgba(245,158,11,0.05); }
+    .result.danger{ border-color:#7f1d1d; box-shadow: 0 0 0 3px rgba(239,68,68,0.05); }
+
+    pre.code { background:#051018;padding:12px;border-radius:8px;border:1px solid #142233;overflow:auto;color:#dbeafe;font-size:13px;line-height:1.45; }
+
+    footer { text-align:center;padding:1.25rem;color:#9fb2d1;border-top:1px solid #111827;margin-top:2rem; }
+    .disclaimer { color:#7f98b6;font-size:0.9rem;margin-top:0.75rem; }
+
+    /* small helpers */
+    .muted { color:#9fb2d1; font-size:0.95rem; }
+    .small { font-size:0.9rem; color:#9fb2d1; }
+    .switch { display:inline-flex; align-items:center; gap:.5rem; }
+    input[type="text"] { width:100%; padding:.5rem; border-radius:8px; border:1px solid #223247; background:#071022; color:#e6eef8; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CodeAI</h1>
+    <nav>
+      <a href="#upload">Upload</a>
+      <a href="#paste">Paste Code</a>
+      <a href="#website">Scan Website</a>
+      <a href="#about">About</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h2>Advanced File, Code & Website Scanner</h2>
+    <p>Upload files, paste code or scan websites using in-browser heuristic checks. Scans are local where possible; website scans may require a proxy due to browser CORS rules.</p>
+    <button class="btn" onclick="document.querySelector('#upload').scrollIntoView({behavior:'smooth'})">Start Scanning</button>
+  </section>
+
+  <main class="container">
+    <!-- File Upload Scanner -->
+    <section id="upload" class="card" aria-labelledby="upload-h">
+      <h3 id="upload-h">File Upload Scanner</h3>
+      <p class="small">Choose a file (scripts, source files, archives). Text-based scans only apply to readable files.</p>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <input id="fileInput" type="file" accept="*/*"/>
+        <button id="scanFileBtn" class="btn">Scan File</button>
+        <button id="resetFileBtn" class="btn secondary">Reset</button>
+      </div>
+      <div id="fileStatus" class="status" aria-live="polite">No file selected.</div>
+      <div id="fileScanResult" class="result" hidden></div>
+      <p class="disclaimer">This is a heuristic scan intended for quick triage. Use sandboxing or professional analysis for high-risk files.</p>
+    </section>
+
+    <!-- Paste Code Scanner -->
+    <section id="paste" class="card" aria-labelledby="paste-h">
+      <h3 id="paste-h">Paste Code to Scan</h3>
+      <p class="small">Paste any code snippet or full source file below and click "Scan Code".</p>
+      <textarea id="codeInput" placeholder="// Paste code here..."></textarea>
+      <div style="display:flex;gap:12px;margin-top:10px">
+        <button id="scanCodeBtn" class="btn">Scan Code</button>
+        <button id="clearCodeBtn" class="btn secondary">Clear</button>
+      </div>
+      <div id="codeScanResult" class="result" hidden></div>
+      <p class="disclaimer">Language detection is heuristic. Results are probabilistic and best used as guidance.</p>
+    </section>
+
+    <!-- Website Scanner -->
+    <section id="website" class="card" aria-labelledby="website-h">
+      <h3 id="website-h">Scan Website / URL</h3>
+      <p class="small">Enter a URL to fetch and scan the page HTML and inline JavaScript for suspicious patterns.</p>
+
+      <div style="display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:center;">
+        <input id="urlInput" type="text" placeholder="https://example.com" />
+        <button id="scanUrlBtn" class="btn">Scan Website</button>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:center;margin-top:8px">
+        <label class="switch"><input id="useProxy" type="checkbox"/> Use CORS proxy (try if direct fetch fails)</label>
+        <span class="muted">Proxy sends request through <code>api.allorigins.win</code>.</span>
+      </div>
+
+      <div id="urlStatus" class="status" aria-live="polite">Ready to scan a website.</div>
+      <div id="urlScanResult" class="result" hidden></div>
+
+      <p class="disclaimer">Note: Direct fetches may fail for many sites due to CORS. Use proxy only for testing — proxy operators will see the requested page content.</p>
+    </section>
+
+    <section id="about" class="card" aria-labelledby="about-h">
+      <h3 id="about-h">About CodeAI</h3>
+      <p class="small">CodeAI performs in-browser static analysis using pattern matching and behavioural heuristics. It flags risky constructs like <code>eval</code>, shell-execution calls, networking functions, base64/encoding usage, hidden iframes and auto-redirects.</p>
+    </section>
+  </main>
+
+  <footer>
+    © <span id="year"></span> CodeAI — Local heuristic scanner. All rights reserved.
+  </footer>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
